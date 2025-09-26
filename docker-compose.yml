@@ -1,0 +1,41 @@
+version: "3.8"
+
+services:
+  jenkins:
+    image: jenkins/jenkins:lts-jdk11
+    container_name: project2-compose_jenkins_1
+    user: root
+    restart: unless-stopped
+    privileged: true
+    depends_on:
+      - dind
+    environment:
+      DOCKER_HOST: "tcp://dind:2375"
+      DOCKER_CERT_PATH: ""
+      DOCKER_TLS_VERIFY: "0"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    networks:
+      - jenkins_net
+
+  dind:
+    image: docker:dind
+    container_name: project2-compose_dind_1
+    privileged: true
+    networks:
+      - jenkins_net
+    ports:
+      - "2375:2375"
+    environment:
+      DOCKER_TLS_CERTDIR: ""
+
+volumes:
+  jenkins_home:
+
+networks:
+  jenkins_net:
+    driver: bridge
+
