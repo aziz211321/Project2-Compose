@@ -1,41 +1,46 @@
-version: "3.8"
+version: '3.8'
+
+networks:
+  jenkins:
+    driver: bridge
+
+volumes:
+  jenkins-data: {}
+  docker-certs-ca: {}
+  docker-certs-client: {}
 
 services:
+  dind:
+    image: docker:dind
+    container_name: jenkins-dind
+    privileged: true
+    networks:
+      - jenkins
+    environment:
+      - DOCKER_TLS_CERTDIR=/certs
+    volumes:
+      - jenkins-data:/var/jenkins_home
+      - docker-certs-ca:/certs/ca
+      - docker-certs-client:/certs/client
+    command: --storage-driver overlay2
+    restart: unless-stopped
+
   jenkins:
     image: jenkins/jenkins:lts-jdk11
-    container_name: project2-compose_jenkins_1
+    container_name: jenkins-controller
     user: root
-    restart: unless-stopped
-    privileged: true
+    networks:
+      - jenkins
     depends_on:
       - dind
     environment:
-      DOCKER_HOST: "tcp://dind:2375"
-      DOCKER_CERT_PATH: ""
-      DOCKER_TLS_VERIFY: "0"
+      - DOCKER_HOST=tcp://dind:2376
+      - DOCKER_CERT_PATH=/certs/client
+      - DOCKER_TLS_VERIFY=1
     volumes:
-      - jenkins_home:/var/jenkins_home
+      - jenkins-data:/var/jenkins_home
+      - docker-certs-client:/certs/client:ro
     ports:
       - "8080:8080"
       - "50000:50000"
-    networks:
-      - jenkins_net
-
-  dind:
-    image: docker:dind
-    container_name: project2-compose_dind_1
-    privileged: true
-    networks:
-      - jenkins_net
-    ports:
-      - "2375:2375"
-    environment:
-      DOCKER_TLS_CERTDIR: ""
-
-volumes:
-  jenkins_home:
-
-networks:
-  jenkins_net:
-    driver: bridge
-
+    restart: unless-stopped
