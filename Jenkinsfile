@@ -6,7 +6,8 @@ pipeline {
     }
 
     environment {
-        SNYK_TOKEN = credentials('3e62befd-0cde-4768-b2c7-c92c2e17274e') 
+        // This pulls the value from Jenkins credentials (ID must match)
+        SNYK_TOKEN = credentials('SNYK_TOKEN')
     }
 
     stages {
@@ -18,7 +19,8 @@ pipeline {
 
         stage('Unit Test') {
             steps {
-                sh 'npm test || true' // Use '|| true' only if your app doesn't have test configured yet
+                // This allows the pipeline to pass even if tests are not configured yet
+                sh 'npm test || true'
             }
         }
 
@@ -26,22 +28,24 @@ pipeline {
             steps {
                 script {
                     def app = "myapp-${env.BUILD_ID}"
-                    sh "docker build -t $app ."
+                    sh "docker build -t ${app} ."
                 }
             }
         }
 
         stage('Push Docker Image') {
             steps {
-                // Optional: Only if you setup DockerHub credentials
                 echo 'Push to registry here (DockerHub, GitHub Packages, etc.)'
+                // Optional: docker login + docker push commands go here
             }
         }
 
         stage('Snyk Security Scan') {
             steps {
                 sh 'npm install -g snyk'
+                // Use the Jenkins credentials pulled above
                 sh 'snyk auth $SNYK_TOKEN'
+                // Fail build on High/Critical vulnerabilities
                 sh 'snyk test --severity-threshold=high'
             }
         }
